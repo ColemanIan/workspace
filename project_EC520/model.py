@@ -8,6 +8,15 @@ from torchvision.transforms import ToTensor
 
 from hyperparameters import hp
 
+
+
+# Custom modules
+from CBAM import CBAM
+from residual_block import ResidualBlock
+from downsample import Downsample
+from upsample import Upsample
+
+
 class FirstBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size):
         super().__init__()
@@ -22,66 +31,83 @@ class FirstBlock(nn.Module):
         return x
 
 
-class ResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size):
-
-        super().__init__()
-
-        self.res_conv1   = nn.Conv2d(in_channels, out_channels, kernel_size)
-        self.silu        = nn.SiLU()
-        self.res_conv2   = nn.Conv2d(in_channels, out_channels, kernel_size)
-
-    def forward(self, x):
-        x_              = self.res_conv1(x)        
-        x_              = self.silu(x_)
-        x_              = self.res_conv2(x_)
-        return (x + x_)
 
 
-
-class CBAM(nn.Module):
-    """
-    Convolutional Block Attention Module (CBAM) implementation.
-
-    Given an intermediate feature map, our module sequentially infers attention maps 
-    along two separate dimensions, channel and spatial, then the attention maps are 
-    multiplied to the input feature map for adaptive feature refinement.
-
-    https://arxiv.org/pdf/1807.06521
-    """
+class Autoencoder(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size):
         super().__init__()
 
-        # Channel Attention
-        self.avg_pool    = nn.AdaptiveAvgPool2d(1)
-        self.max_pool    = nn.AdaptiveMaxPool2d(1)
-        self.mlp         = nn.Sequential(
-                        nn.Linear(in_channels, in_channels // 16),
-                        nn.ReLU(),
-                        nn.Linear(in_channels // 16, in_channels)
-                    )
-        self.sigmoid     = nn.Sigmoid()
 
-        # Spatial Attention
-        self.conv_7x7    = nn.Conv2d(2, 1, kernel_size=7, padding=3)
-        self.sigmoid     = nn.Sigmoid()
+        # ENCODER 
+        # Consists of conv+silu block then repeating residual and CBAM blocks with skip connections after the CBAM blocks,
+        # then downsampling blocks to reduce the spatial dimensions and increase the number of channels.
 
-    def forward(self, x):
-        # Channel Attention
-        avg_out         = self.mlp(self.avg_pool(x).view(x.size(0), -1))
-        max_out         = self.mlp(self.max_pool(x).view(x.size(0), -1))
-        channel_attn    = self.sigmoid(avg_out + max_out).unsqueeze(2).unsqueeze(3)
-        x               = x * channel_attn
+        self.first_block   = FirstBlock(in_channels, out_channels, kernel_size)
 
-        # Spatial Attention
-        avg_out         = torch.mean(x, dim=1, keepdim=True)
-        max_out, _      = torch.max(x, dim=1, keepdim=True)
-        spatial_attn    = self.sigmoid(self.conv_7x7(torch.cat([avg_out, max_out], dim=1)))
-        x               = x * spatial_attn
+        # Enc 1
+        self.enc1 = nn.Sequential(
+            ResidualBlock(out_channels, out_channels, kernel_size),
+            CBAM(out_channels, out_channels, kernel_size)
+        )
+        # Skip connection from first block to after CBAM in enc1
+        self.down1 = Downsample(out_channels, out_channels*2, kernel_size)
 
+        # Enc 2
+        self.enc2 = nn.Sequential(
+            ResidualBlock(out_channels*2, out_channels*2, kernel_size),
+            CBAM(out_channels*2, out_channels*2, kernel_size)
+        )
+        # Skip connection
+        self.down2 = Downsample(out_channels*2, out_channels*4, kernel_size)
+
+        # Enc 3
+        self.enc3 = nn.Sequential(
+            ResidualBlock(out_channels*4, out_channels*4, kernel_size),
+            CBAM(out_channels*4, out_channels*4, kernel_size)
+        )
+        # Skip connection
+        self.down3 = Downsample(out_channels*4, out_channels*8, kernel_size)
+        
+        # Enc 4
+        self.enc4 = nn.Sequential(
+            ResidualBlock(out_channels*8, out_channels*8, kernel_size),
+            CBAM(out_channels*8, out_channels*8, kernel_size)
+        )
+        # Skip connection
+        self.down4 = Downsample(out_channels*8, out_channels*16, kernel_size)
+
+        # Enc 5
+        self.enc5 = nn.Sequential(
+            ResidualBlock(out_channels*16, out_channels*16, kernel_size),
+            CBAM(out_channels*16, out_channels*16, kernel_size)
+        )
+        # Skip connection
+        self.down5 = Downsample(out_channels*16, out_channels*32, kernel_size)
+
+        # DECODER
+        # Consists of repeating upsampling blocks with skip connections from the encoder blocks, then a
+        # final conv block to reduce the number of channels back to 3 for the output HDR image.
+        # Also a contextual attention block to capture long-range dependencies in the feature maps.
+
+
+        
+    def forward(self, ldr_image):
+        # Input: LDR image of shape (batch_size, 3, H, W)
+        x = self.first_block(ldr_image)
+
+        #skip connection
+        skip = x
+
+
+
+        
+
+        
+        
+        
+        
+        
         return x
-
-
 
 
 # model = AttentionHDR().to(device)
