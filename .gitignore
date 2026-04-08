@@ -2,3 +2,11 @@
 ec520_hw8.m
 my_work.m
 scratch.m
+__pychace__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/

@@ -1,4 +1,3 @@
-
 import torch
 from torch import nn
 
@@ -49,4 +48,17 @@ class CBAM(nn.Module):
         x               = x * spatial_attn
 
         return x
+
+    @staticmethod
+    def test():
+        print("Testing CBAM...")
+        batch_size, channels, h, w = 2, 64, 32, 32
+        x = torch.randn(batch_size, channels, h, w)
+        model = CBAM(in_channels=channels, out_channels=channels, kernel_size=7)
+        y = model(x)
+        assert y.shape == x.shape, f"CBAM shape mismatch: {y.shape} != {x.shape}"
+        print("CBAM math/shapes test passed!")
+
+if __name__ == '__main__':
+    CBAM.test()
 

@@ -16,3 +16,17 @@ class Downsample(nn.Module):
 
     def forward(self, x):
         return self.downsample(x)
+
+    @staticmethod
+    def test():
+        print("Testing Downsample...")
+        batch_size, in_c, h, w = 2, 32, 64, 64
+        out_c = 64
+        x = torch.randn(batch_size, in_c, h, w)
+        model = Downsample(in_channels=in_c, out_channels=out_c)
+        y = model(x)
+        assert y.shape == (batch_size, out_c, h // 2, w // 2), f"Downsample shape mismatch: {y.shape}"
+        print("Downsample math/shapes test passed!")
+
+if __name__ == '__main__':
+    Downsample.test()

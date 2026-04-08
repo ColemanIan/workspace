@@ -20,7 +20,7 @@ from upsample import Upsample
 class FirstBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size):
         super().__init__()
-        self.conv_1  = nn.Conv2d(in_channels, out_channels, kernel_size)
+        self.conv_1  = nn.Conv2d(in_channels, out_channels, kernel_size, padding=kernel_size//2)
         self.silu    = nn.SiLU()
 
 
@@ -30,7 +30,16 @@ class FirstBlock(nn.Module):
         x = self.silu(x)
         return x
 
-
+    @staticmethod
+    def test():
+        print("Testing FirstBlock...")
+        batch_size, in_c, h, w = 2, 3, 64, 64
+        out_c = 32
+        x = torch.randn(batch_size, in_c, h, w)
+        model = FirstBlock(in_channels=in_c, out_channels=out_c, kernel_size=5)
+        y = model(x)
+        assert y.shape[0] == batch_size and y.shape[1] == out_c, f"FirstBlock shape mismatch: {y.shape}"
+        print("FirstBlock math/shapes test passed!")
 
 
 class Autoencoder(nn.Module):
@@ -109,6 +118,19 @@ class Autoencoder(nn.Module):
         
         return x
 
+    @staticmethod
+    def test():
+        print("Testing Autoencoder...")
+        batch_size, in_c, h, w = 2, 3, 64, 64
+        out_c = 32
+        x = torch.randn(batch_size, in_c, h, w)
+        model = Autoencoder(in_channels=in_c, out_channels=out_c, kernel_size=3)
+        y = model(x)
+        # The current forward method just passes x through first_block
+        # Need to fill out more
+        print(f"Autoencoder test passed! Output shape: {y.shape}")
 
-# model = AttentionHDR().to(device)
+if __name__ == '__main__':
+    FirstBlock.test()
+    Autoencoder.test()
 

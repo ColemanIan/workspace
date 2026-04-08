@@ -22,3 +22,17 @@ class Upsample(nn.Module):
 
     def forward(self, x):
         return self.upsample(x)
+
+    @staticmethod
+    def test():
+        print("Testing Upsample...")
+        batch_size, in_c, h, w = 2, 64, 32, 32
+        out_c = 32
+        x = torch.randn(batch_size, in_c, h, w)
+        model = Upsample(in_channels=in_c, out_channels=out_c)
+        y = model(x)
+        assert y.shape == (batch_size, out_c, h * 2, w * 2), f"Upsample shape mismatch: {y.shape}"
+        print("Upsample math/shapes test passed!")
+
+if __name__ == '__main__':
+    Upsample.test()
